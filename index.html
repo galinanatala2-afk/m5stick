@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>M5Stick Gemini Flash Bridge</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #121212; color: #fff; }
+        button { padding: 15px 25px; font-size: 16px; background: #1a73e8; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px;}
+        #log { display: block; margin-top: 20px; white-space: pre-wrap; text-align: left; background: #222; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 14px; color: #00ffcc; }
+    </style>
+</head>
+<body>
+    <h2>M5StickC Plus 2 + Gemini Flash</h2>
+    <button id="connectBtn">Подключить M5Stick по Bluetooth</button>
+    <div id="status" style="margin-top: 15px; color: #aaa;">Статус: Отключено</div>
+    <div id="log">Ожидание подключения...</div>
+
+    <script>
+        let bluetoothDevice;
+        let rxCharacteristic;
+        const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+        const CHARACTERISTIC_UUID_RX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+        const CHARACTERISTIC_UUID_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+        
+        // Вставьте сюда ваш бесплатный API-ключ Google AI Studio вместо YOUR_GEMINI_API_KEY
+        const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY";
+
+        document.getElementById('connectBtn').addEventListener('click', async () => {
+            try {
+                document.getElementById('status').innerText = 'Поиск устройства...';
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'M5StickCPlus2_Gemini' }],
+                    optionalServices: [SERVICE_UUID]
+                });
+
+                const server = await bluetoothDevice.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                rxCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID_RX);
+                const txCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID_TX);
+
+                await txCharacteristic.startNotifications();
+                txCharacteristic.addEventListener('characteristicvaluechanged', handleIncomingMessage);
+
+                document.getElementById('status').innerText = 'Статус: Подключено к Gemini!';
+                document.getElementById('status').style.color = '#4CAF50';
+            } catch (error) {
+                document.getElementById('status').innerText = 'Ошибка: ' + error;
+                document.getElementById('status').style.color = '#ff5252';
+            }
+        });
+
+        async function handleIncomingMessage(event) {
+            const value = new TextDecoder().decode(event.target.value);
+            document.getElementById('log').innerText = "Запрос со стика: " + value;
+
+            try {
+                const aiAnswer = await askGemini(value);
+                document.getElementById('log').innerText += "\nОтвет Gemini отправлен на стик.";
+                
+                const encoder = new TextEncoder();
+                await rxCharacteristic.writeValue(encoder.encode(aiAnswer));
+            } catch (err) {
+                document.getElementById('log').innerText += "\nОшибка API Gemini: " + err;
+            }
+        }
+
+        async function askGemini(promptText) {
+            const url = ;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: promptText }]
+                    }]
+                })
+            });
+
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text;
+        }
+    </script>
+</body>
+</html>
