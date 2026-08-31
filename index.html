@@ -83,9 +83,10 @@
            const data = await response.json();
 
 if (data.error) {
-    throw new Error(data.error.message);
-}
-return data.candidates[0].content.parts[0].text;
+        throw new Error(data.error.message);
+    }
+    return data.candidates[0].content.parts[0].text;
+
         
     </script>
 </body>
