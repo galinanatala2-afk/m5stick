@@ -80,9 +80,13 @@
                 })
             });
 
-            const data = await response.json();
-            return data.candidates[0].content.parts[0].text;
-        }
+           const data = await response.json();
+
+if (data.error) {
+    throw new Error(data.error.message);
+}
+return data.candidates[0].content.parts[0].text;
+        
     </script>
 </body>
 </html>
